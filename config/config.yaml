@@ -1,0 +1,33 @@
+defaults:
+  - _self_
+
+clip:
+  model_name: "ViT-B/32" # fast
+  device: "cuda"
+  template: "a photo of {}"
+
+umap:
+  n_neighbors: 15
+  n_components: 2
+  metric: "cosine"
+  random_state: 42
+
+# CCS18 categories
+categories:
+  - "a bottle"
+  - "a bowl"
+  - "a car"
+  - "a chair"
+  - "an (analog) clock"
+  - "a cup"
+  - "a fork"
+  - "a keyboard"
+  - "a knife"
+  - "a laptop"
+  - "a microwave"
+  - "a computer mouse"
+  - "an oven"
+  - "a potted plant"
+  - "a sink"
+  - "a stop sign"
+  - "a toilet"

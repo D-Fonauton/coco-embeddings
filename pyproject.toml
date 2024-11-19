@@ -1,0 +1,24 @@
+[project]
+name = "coco-embeddings"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "clip",
+    "ftfy>=6.3.1",
+    "hydra-core>=1.3.2",
+    "ipython>=8.18.1",
+    "matplotlib>=3.9.2",
+    "pyqt5>=5.15.11",
+    "pyqt6>=6.7.1",
+    "regex>=2024.11.6",
+    "seaborn>=0.13.2",
+    "torch>=2.5.1",
+    "torchvision>=0.20.1",
+    "tqdm>=4.67.0",
+    "umap-learn>=0.5.7",
+]
+
+[tool.uv.sources]
+clip = { git = "https://github.com/openai/CLIP.git" }
