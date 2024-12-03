@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 
 # Local
-from src.models import get_cached_clip
+from src import get_cached_clip
 
 
 def dimreduce(cfg, embeddings):
