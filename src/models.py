@@ -1,4 +1,5 @@
 import clip
+import torch
 
 # Global cache for the model and preprocess function
 _clip_cache = {}
@@ -26,3 +27,24 @@ def get_cached_clip(model_name: str, device: str):
         print("done.")
 
     return _clip_cache[model_name]["model"], _clip_cache[model_name]["preprocess"]
+
+
+class CLIP:
+    def __init__(self, cfg) -> None:
+        self.device = cfg.clip.device
+        self.model_name = cfg.clip.model_name
+        self.model, self.preprocess = clip.load(self.model_name, device=self.device)
+
+
+    def calculate_similarity(self, text, image):
+        text_input = clip.tokenize(text).to(self.device)
+        image_input = self.preprocess(image).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            image_features = self.model.encode_image(image_input)
+            text_features = self.model.encode_text(text_input)
+
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+
+            return (image_features @ text_features.T).item()

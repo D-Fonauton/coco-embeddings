@@ -1,79 +1,61 @@
 import hydra
 from omegaconf import DictConfig
-import clip
-import torch
-from umap import UMAP
-import matplotlib.pyplot as plt
+from PIL import Image
 from tqdm import tqdm
 import numpy as np
 
-# Local
-from src.models import get_cached_clip
+# local
+from src import CLIP, COCOSearch18
+from utils import crop_image
 
 
-def dimreduce(cfg, embeddings):
-    reducer = UMAP(
-        n_neighbors=cfg.umap.n_neighbors,
-        n_components=cfg.umap.n_components,
-        metric=cfg.umap.metric,
-        random_state=cfg.umap.random_state,
-    )
-    return reducer.fit_transform(embeddings)
+def calculate_simularity(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, crop_size):
+    # using dataset config from config
+    simularity = dict()
+    for index in tqdm(range(len(cs18.present)), desc='calculating simularities'):
+        current_name, current_subject, current_task = cs18.present.get_identity(index)
+        image = Image.open(cs18.full_path("TP", current_task, current_name))
+        x, y = cs18.present.get_position(index)
+        
+        # skip if x is nan
+        if np.isnan(x):
+            simularity[index] = np.nan
+            continue
+
+        # skip if fixation point is out of image border
+        if x <= 0 or x > 1680 or y < 0 or y >= 1050:
+            simularity[index] = np.nan
+            continue
+
+        position = (round(x), round(y))
+        image = crop_image(image, position, crop_size)
+        text = cfg.clip.template.format(cfg.categories[cfg.dataset.categories.index(current_task)])
+        
+        simularity[index] = model.calculate_similarity(text, image)
+    return simularity
 
 
-def clip_embed(cfg, text):
-    device = cfg.clip.device
-    model, preprocess = get_cached_clip(cfg.clip.model_name, device)
-    tokenized_text = clip.tokenize(text).to(device)
+def gen_degree(number, cfg_dataset):
+    return int(round(2 * np.tan(number / 2 / 180 * np.pi) * cfg_dataset.distance * cfg_dataset.width_pixel / cfg_dataset.width))
 
-    # Embed each category
-    embeddings = []
-    model.eval()
-    with torch.no_grad():
-        for tokens in tqdm(tokenized_text, desc="Embedding categories"):
-            tokens = tokens.unsqueeze(0)  # Add batch dimension. could batch as well..
-            text_features = model.encode_text(tokens).cpu().numpy()
-            embeddings.append(text_features)
-
-    return np.vstack(embeddings)  # Shape: (num_categories, embedding_dim)
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(cfg: DictConfig) -> None:
-    print("Hydra config:", cfg)
 
-    cats = cfg.categories
-    inputs = [cfg.clip.template.format(cat) for cat in cats]
-    embeddings = clip_embed(cfg, inputs)
-    assert embeddings.shape[0] == len(cats)
+    degrees = [5,10,15]
+    dataset = COCOSearch18(cfg.dataset)
+    print(f'the length of present data: {len(dataset.present)}')
+    present = dataset.present.data
+    model = CLIP(cfg)
 
-    embeddings_2d = dimreduce(cfg, embeddings)
-    plot_embeddings(embeddings_2d, cats)
+    for i in range(3):
+        print(f"degrees: {degrees[i]}")
+        crop_size = gen_degree(degrees[i], cfg.dataset)
+        simularities = calculate_simularity(dataset, cfg, model, crop_size)
+        present[f"simularity_{degrees[i]}"] = simularities
+
+    present.to_csv('new_present.csv')
 
 
-def plot_embeddings(embeddings_2d, labels):
-    plt.figure(figsize=(10, 6))
-
-    # Plot each point and add annotation
-    for i, label in enumerate(labels):
-        x, y = embeddings_2d[i]
-        plt.scatter(x, y, s=200)
-        plt.annotate(
-            label,
-            (x, y),
-            textcoords="offset points",
-            xytext=(10, 10),  # Offset for better visibility
-            ha="center",
-            fontsize=10,
-            color="black",
-            bbox=dict(
-                boxstyle="round,pad=0.3", edgecolor="gray", facecolor="white", alpha=0.6
-            ),
-        )
-
-    plt.xlabel("UMAP-1")
-    plt.ylabel("UMAP-2")
-    plt.grid(True)
-    plt.show()
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

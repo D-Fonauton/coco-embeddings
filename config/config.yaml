@@ -1,4 +1,5 @@
 defaults:
+  - dataset: "dataset"
   - _self_
 
 clip:
@@ -31,3 +32,4 @@ categories:
   - "a sink"
   - "a stop sign"
   - "a toilet"
+  - "a tv"

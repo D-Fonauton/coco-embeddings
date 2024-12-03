@@ -11,3 +11,6 @@ wheels/
 
 # Project-specific
 outputs
+
+# vscode outputs
+.vscode
