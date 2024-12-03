@@ -23,7 +23,7 @@ def calculate_simularity(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, crop_
             continue
 
         # skip if fixation point is out of image border
-        if x <= 0 or x > 1680 or y < 0 or y >= 1050:
+        if x < 0 or x >= cfg.dataset.width_pixel or y < 0 or y >= cfg.dataset.height_pixel:
             simularity[index] = np.nan
             continue
 
