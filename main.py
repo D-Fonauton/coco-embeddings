@@ -6,10 +6,14 @@ import numpy as np
 
 # local
 from src import CLIP, COCOSearch18
-from utils import crop_image
+from utils import crop_image, crop_image_using_bbox
 
 
-def calculate_simularity(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, crop_size):
+def gen_degree(number, cfg_dataset):
+    return int(round(2 * np.tan(number / 2 / 180 * np.pi) * cfg_dataset.distance * cfg_dataset.width_pixel / cfg_dataset.width))
+
+
+def calculate_simularity(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, degree):
     # using dataset config from config
     simularity = dict()
     for index in tqdm(range(len(cs18.present)), desc='calculating simularities'):
@@ -28,15 +32,34 @@ def calculate_simularity(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, crop_
             continue
 
         position = (round(x), round(y))
-        image = crop_image(image, position, crop_size)
+        crop_size = gen_degree(degree, cfg.dataset)
+        image = crop_image(image, position, (crop_size, crop_size))
         text = cfg.clip.template.format(cfg.categories[cfg.dataset.categories.index(current_task)])
         
         simularity[index] = model.calculate_similarity(text, image)
     return simularity
 
 
-def gen_degree(number, cfg_dataset):
-    return int(round(2 * np.tan(number / 2 / 180 * np.pi) * cfg_dataset.distance * cfg_dataset.width_pixel / cfg_dataset.width))
+
+
+def calculate_simularity_bbox(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, mode):
+    # using dataset config from config
+
+    # image_names = np.unique([cs18.present.get_image_name(i) for i in range(len(cs18.present))])
+    simularity = dict()
+    for index in tqdm(range(len(cs18.present)), desc='calculating simularities'):
+        current_name, current_subject, current_task = cs18.present.get_identity(index)
+        bbox = cs18.present.get_bbox(index)
+
+        image = Image.open(cs18.full_path("TP", current_task, current_name))
+        image = crop_image_using_bbox(image, bbox, mode)
+
+        text = cfg.clip.template.format(cfg.categories[cfg.dataset.categories.index(current_task)]) 
+        simularity[index] = model.calculate_similarity(text, image)
+    return simularity
+
+
+
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -48,11 +71,15 @@ def main(cfg: DictConfig) -> None:
     present = dataset.present.data
     model = CLIP(cfg)
 
+    """
     for i in range(3):
-        print(f"degrees: {degrees[i]}")
-        crop_size = gen_degree(degrees[i], cfg.dataset)
-        simularities = calculate_simularity(dataset, cfg, model, crop_size)
-        present[f"simularity_{degrees[i]}"] = simularities
+        present[f"simularity_{degrees[i]}"] = calculate_simularity(dataset, cfg, model, degrees[i])
+    """
+
+    present[f"target_simularity_padding"] = calculate_simularity_bbox(dataset, cfg, model, "padding")
+    present[f"target_simularity_fill"] = calculate_simularity_bbox(dataset, cfg, model, "fill")
+
+    
 
     present.to_csv('new_present.csv')
 

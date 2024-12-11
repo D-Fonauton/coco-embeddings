@@ -17,6 +17,14 @@ class PresentData:
         return self.data.X[index], self.data.Y[index]
     
 
+    def get_bbox(self, index):
+        return [self.data.bbox_x[index], self.data.bbox_y[index], self.data.bbox_w[index], self.data.bbox_h[index]]
+    
+
+    def get_image_name(self, index):
+        return self.data.name[index]
+
+
     def __len__(self):
         return len(self.data)
 

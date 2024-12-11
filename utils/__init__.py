@@ -1,1 +1,1 @@
-from .crop import crop_image
+from .crop import crop_image, crop_image_using_bbox
