@@ -65,13 +65,13 @@ def calculate_simularity_bbox(cs18: COCOSearch18, cfg: DictConfig, model: CLIP, 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(cfg: DictConfig) -> None:
 
-    degrees = [5,10,15]
     dataset = COCOSearch18(cfg.dataset)
     print(f'the length of present data: {len(dataset.present)}')
     present = dataset.present.data
     model = CLIP(cfg)
 
     """
+    degrees = [5,10,15]
     for i in range(3):
         present[f"simularity_{degrees[i]}"] = calculate_simularity(dataset, cfg, model, degrees[i])
     """
